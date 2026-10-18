@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสารวัตรนักเรียนดิจิทัล</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> body { font-family: 'Prompt', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center relative">
+            <div class="w-16 h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-lg">
+                <i class="fa-solid fa-walkie-talkie"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-1">เข้าสู่ระบบสารวัตรนักเรียน</h2>
+            <p class="text-xs text-slate-500 mb-6">กรอกนามเรียกขาน (เช่น YRC 01) และรหัสผ่านเพื่อเข้าใช้งาน</p>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">นามเรียกขานประจำตัว *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-radio"></i></span>
+                        <input type="text" id="loginCallsign" required placeholder="เช่น YRC 01" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm uppercase">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน *</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-key"></i></span>
+                        <input type="password" id="loginPassword" required placeholder="รหัสผ่าน (yup238)" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
+                    </div>
+                </div>
+
+                <div id="loginError" class="hidden text-xs text-rose-600 font-semibold bg-rose-50 p-3 rounded-xl border border-rose-200 text-center">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="loginErrorText">นามเรียกขานหรือรหัสผ่านไม่ถูกต้อง!</span>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2 text-sm">
+                    <i class="fa-solid fa-right-to-bracket"></i><span>เข้าสู่ระบบ</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top Navbar -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-slate-900 font-bold text-xl shadow">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base leading-tight">ระบบสารวัตรนักเรียนดิจิทัล</h1>
+                    <p class="text-xs text-slate-400">Student Inspector Management System</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3 mt-2 sm:mt-0">
+                <div class="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center space-x-2 text-xs">
+                    <i class="fa-solid fa-user-shield text-amber-400"></i>
+                    <span id="currentLoggedInUser" class="font-medium text-slate-200">-</span>
+                </div>
+                <button onclick="handleLogout()" title="ออกจากระบบ" class="px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold rounded-lg transition flex items-center space-x-1">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i><span class="hidden sm:inline">ออกจากระบบ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-slate-800 border-t border-slate-700 px-4">
+            <div class="max-w-7xl mx-auto flex space-x-1 sm:space-x-4 overflow-x-auto py-2 text-sm">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-4 py-2 rounded-lg font-medium bg-amber-600 text-white flex items-center space-x-2 whitespace-nowrap shadow">
+                    <i class="fa-solid fa-chart-pie"></i> <span>แดชบอร์ด & สถิติวันนี้</span>
+                </button>
+                <button onclick="switchTab('record-violation')" id="nav-record-violation" class="tab-btn px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-slate-700 flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span>บันทึกความผิดนักเรียน</span>
+                </button>
+                <button onclick="switchTab('report')" id="nav-report" class="tab-btn px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-slate-700 flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-file-pen"></i> <span>กรอกรายงานประจำวัน</span>
+                </button>
+                <button onclick="switchTab('daily-archive')" id="nav-daily-archive" class="tab-btn px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-slate-700 flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-calendar-days"></i> <span>สรุปรายงานประจำวันย้อนหลัง</span>
+                </button>
+                <button onclick="switchTab('students')" id="nav-students" class="tab-btn px-4 py-2 rounded-lg font-medium text-slate-300 hover:bg-slate-700 flex items-center space-x-2 whitespace-nowrap">
+                    <i class="fa-solid fa-users"></i> <span>ฐานข้อมูลนักเรียน (4,000 คน)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- 1. DASHBOARD -->
+        <section id="tab-content-dashboard" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">ภาพรวมการปฏิบัติงานประจำวัน (วันนี้)</h2>
+                    <p class="text-sm text-slate-500">สรุปสถิติเหตุการณ์และความผิดของนักเรียนประจำวัน</p>
+                </div>
+                <button onclick="switchTab('record-violation')" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm shadow transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i> <span>+ บันทึกความผิดนักเรียน</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">บันทึกทำผิดวันนี้</p>
+                        <h3 id="statTodayViolations" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-file-circle-xmark"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">ยอดทำผิดสะสมทั้งหมด</p>
+                        <h3 id="statTotalViolations" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-users-rectangle"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">นักเรียนในฐานข้อมูล</p>
+                        <h3 id="statTotalStudents" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- รายการทำผิดวันนี้ -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 text-base mb-4"><i class="fa-solid fa-list-check text-amber-600 mr-2"></i> รายการทำผิดประจำวันวันนี้</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase">
+                                <th class="p-3">วันที่</th>
+                                <th class="p-3">นักเรียน (รหัส/ชื่อ)</th>
+                                <th class="p-3">ชั้น/ห้อง</th>
+                                <th class="p-3">ฐานความผิด</th>
+                                <th class="p-3">ผู้บันทึก</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todayViolationTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. TAB: บันทึกความผิดนักเรียน (รองรับพิมพ์ฐานความผิดเพิ่มเอง) -->
+        <section id="tab-content-record-violation" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 max-w-2xl mx-auto">
+                <div class="border-b border-slate-200 pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-pen-to-square text-rose-600 mr-2"></i> บันทึกการกระทำผิดของนักเรียน</h2>
+                    <p class="text-sm text-slate-500">กรอกชื่อ หรือรหัสประจำตัวนักเรียน และเลือกหรือพิมพ์ฐานความผิดเพื่อเพิ่มบันทึก</p>
+                </div>
+
+                <form onsubmit="saveSingleViolation(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ค้นหา/กรอกรหัส หรือ ชื่อนักเรียน *</label>
+                        <input type="text" id="recordStudentInput" list="studentDatalist" required placeholder="พิมพ์รหัสประจำตัว หรือชื่อนักเรียน..." class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <datalist id="studentDatalist"></datalist>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ฐานความผิด *</label>
+                        <select id="recordViolationType" onchange="toggleCustomViolationInput(this, 'customViolationBox')" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm bg-white">
+                            <option value="มาสาย / ไม่ทันเข้าแถว">มาสาย / ไม่ทันเข้าแถว</option>
+                            <option value="แต่งกายผิดระเบียบ / ทรงผม">แต่งกายผิดระเบียบ / ทรงผม</option>
+                            <option value="ขับรถจักรยานยนต์ดัดแปลง / ไม่สวมหมวก">ขับรถจักรยานยนต์ดัดแปลง / ไม่สวมหมวก</option>
+                            <option value="หนีเรียน / ออกนอกสถานศึกษาก่อนเวลา">หนีเรียน / ออกนอกสถานศึกษาก่อนเวลา</option>
+                            <option value="มั่วสุมจุดอับ / บุหรี่-บุหรี่ไฟฟ้า">มั่วสุมจุดอับ / บุหรี่-บุหรี่ไฟฟ้า</option>
+                            <option value="CUSTOM">+ เพิ่มฐานความผิดใหม่ (พิมพ์เอง)...</option>
+                        </select>
+                    </div>
+
+                    <div id="customViolationBox" class="hidden">
+                        <label class="block text-xs font-semibold text-rose-600 mb-1">ระบุฐานความผิดเพิ่มเติม *</label>
+                        <input type="text" id="customViolationInput" placeholder="พิมพ์ชื่อฐานความผิดเพิ่มเติม เช่น เล่นการพนัน, พกสิ่งเสพติด..." class="w-full px-4 py-2.5 rounded-xl border border-rose-300 bg-rose-50/30 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่เกิดเหตุ *</label>
+                        <input type="date" id="recordDate" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm">
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow transition text-sm">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกข้อมูลการกระทำผิด
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 3. DAILY REPORT FORM (ปรับปุ่มติ๊กเหตุการณ์ปกติ/ผิดปกติ + ระบุจุดเสี่ยง) -->
+        <section id="tab-content-report" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 max-w-4xl mx-auto">
+                <div class="border-b border-slate-200 pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">กรอกรายงานสรุปการปฏิบัติงานประจำวัน</h2>
+                    <p class="text-sm text-slate-500">ระบบจะดึงรายการทำผิดทั้งหมดของวันที่เลือกมาสรุปให้อัตโนมัติ</p>
+                </div>
+
+                <form id="dailyReportForm" onsubmit="submitDailyReport(event)" class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ประจำวันที่ *</label>
+                            <input type="date" id="reportDate" required onchange="loadDayViolationsForReport()" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ผู้รายงาน (ชื่อจริง) *</label>
+                            <input type="text" id="reporterName" required readonly class="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-100 text-sm font-medium text-slate-700">
+                        </div>
+                    </div>
+
+                    <!-- กำลังพล 16 คน -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">กำลังพลตามตาราง (คน)</label>
+                            <input type="number" id="staffScheduled" value="16" class="w-full px-3 py-2 rounded-lg border text-sm font-bold bg-slate-100" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">มาปฏิบัติหน้าที่ (คน)</label>
+                            <input type="number" id="staffPresent" value="16" min="0" max="16" oninput="calcStaff()" class="w-full px-3 py-2 rounded-lg border text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">ลา/ขาด (คน)</label>
+                            <input type="number" id="staffAbsent" value="0" class="w-full px-3 py-2 rounded-lg border bg-slate-100 text-sm font-bold text-rose-600" readonly>
+                        </div>
+                    </div>
+
+                    <!-- ตรวจตึก / จุดเสี่ยง (ติ๊กปกติ/ผิดปกติ) -->
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                        <label class="block text-xs font-semibold text-slate-800">ผลการตรวจอาคาร / จุดเสี่ยงประจำวัน *</label>
+                        <div class="flex flex-col sm:flex-row gap-4 text-sm">
+                            <label class="flex items-center space-x-2 cursor-pointer bg-white px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100">
+                                <input type="radio" name="inspectionStatusRadio" value="NORMAL" checked onclick="toggleRiskPointBox(false)" class="text-amber-600 focus:ring-amber-500">
+                                <span class="font-medium text-emerald-700"><i class="fa-solid fa-circle-check mr-1"></i> เหตุการณ์ปกติทุกจุด</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer bg-white px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100">
+                                <input type="radio" name="inspectionStatusRadio" value="ABNORMAL" onclick="toggleRiskPointBox(true)" class="text-amber-600 focus:ring-amber-500">
+                                <span class="font-medium text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> พบเหตุการณ์ผิดปกติ / จุดเสี่ยง</span>
+                            </label>
+                        </div>
+
+                        <div id="riskPointDetailContainer" class="hidden pt-2">
+                            <label class="block text-xs font-semibold text-rose-700 mb-1">ระบุรายละเอียดจุดเสี่ยง / อาคารที่พบเหตุผิดปกติ *</label>
+                            <textarea id="riskPointDetail" rows="3" placeholder="พิมพ์ระบุรายละเอียด เช่น พบนักเรียนมั่วสุมบริเวณหลังอาคาร 4, ประตูรั้วฝั่งทิศตะวันตกชำรุด..." class="w-full px-4 py-2.5 rounded-xl border border-rose-300 bg-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ข้อเสนอแนะ / ปัญหาที่พบระหว่างปฏิบัติงาน</label>
+                        <textarea id="reportNotes" rows="2" placeholder="ระบุข้อเสนอแนะ..." class="w-full px-4 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+                    </div>
+
+                    <!-- สรุปรายการทำผิดให้อัตโนมัติ -->
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                        <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-list text-amber-600 mr-2"></i> รายการทำผิดที่จะถูกสรุปในรายงานของวันนี้ (ดึงมาให้อัตโนมัติ)</h3>
+                        <div id="autoReportViolationList" class="space-y-2 text-xs"></div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-slate-200">
+                        <button type="submit" class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm shadow">
+                            บันทึกและส่งรายงานสรุปประจำวัน
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 4. DAILY REPORTS ARCHIVE -->
+        <section id="tab-content-daily-archive" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div class="border-b pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">สรุปรายงานประจำวันย้อนหลังทั้งหมด</h2>
+                    <p class="text-sm text-slate-500">แสดงผลรายงานสรุปย้อนหลังเรียงตามลำดับวันที่โดยอัตโนมัติ</p>
+                </div>
+
+                <div id="dailyArchiveList" class="space-y-4"></div>
+            </div>
+        </section>
+
+        <!-- 5. STUDENTS DATABASE -->
+        <section id="tab-content-students" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">ฐานข้อมูลรายชื่อนักเรียน (รองรับ 4,000+ คน)</h2>
+                        <p class="text-sm text-slate-500">อัปโหลดไฟล์ CSV เพื่อเพิ่มรายชื่อนักเรียนทั้งหมดอย่างรวดเร็ว</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <label class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm shadow cursor-pointer transition">
+                            <i class="fa-solid fa-file-csv mr-2"></i> อัปโหลดไฟล์ CSV นักเรียน
+                            <input type="file" id="csvFileInput" accept=".csv" onchange="uploadCSV(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <input type="text" id="studentSearchInput" oninput="renderStudentsTable()" placeholder="ค้นหารายชื่อ หรือ รหัสนักเรียน..." class="w-full sm:w-96 px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase">
+                                <th class="p-3">รหัสประจำตัว</th>
+                                <th class="p-3">ชื่อ - นามสกุล</th>
+                                <th class="p-3">ชั้น/ห้อง</th>
+                                <th class="p-3">ประวัติทำผิดสะสม</th>
+                                <th class="p-3 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: ประวัติความผิดนักเรียนรายบุคคล -->
+    <div id="studentHistoryModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <div>
+                    <h3 id="modalStudentName" class="text-lg font-bold text-slate-800">-</h3>
+                    <p id="modalStudentClass" class="text-xs text-slate-500">-</p>
+                </div>
+                <button onclick="closeStudentHistoryModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+            <div class="space-y-3 max-h-80 overflow-y-auto pr-1" id="studentViolationList"></div>
+            <div class="mt-5 text-right">
+                <button onclick="closeStudentHistoryModal()" class="px-4 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let currentUser = localStorage.getItem('inspector_user') || '';
+
+        const inspectorCallsigns = {
+            "YRC01": "นายปณิธาน แก้วอาจ",
+            "YRC 02": "นายสมชาย สายเสนอ",
+            "YRC 03": "นายสมศักดิ์ รักความยุติธรรม",
+            "YRC 04": "ด.ช.รักดี มีสุข",
+            "YRC 05": "นายวีระพล ตื่นสาย"
+        };
+
+        let students = JSON.parse(localStorage.getItem('inspector_students')) || [
+            { id: '1001', name: 'นายสมชาย สายเสนอ', class: 'ม.4/2' },
+            { id: '1002', name: 'ด.ช.รักดี มีสุข', class: 'ม.2/1' },
+            { id: '1003', name: 'นางสาวสมหญิง สดใส', class: 'ม.5/3' },
+            { id: '1004', name: 'นายภาณุเดช ขับซิ่ง', class: 'ม.6/1' }
+        ];
+
+        let historyLogs = JSON.parse(localStorage.getItem('inspector_logs')) || [];
+        let dailyReports = JSON.parse(localStorage.getItem('inspector_daily_reports')) || [];
+
+        window.onload = function() {
+            if (!currentUser) openLoginModal();
+            else updateUserUI();
+            
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('reportDate').value = todayStr;
+            document.getElementById('recordDate').value = todayStr;
+
+            updateStudentDatalist();
+            renderDashboard();
+            renderTodayViolations();
+            renderStudentsTable();
+            renderDailyArchive();
+            loadDayViolationsForReport();
+        };
+
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputCallsign = document.getElementById('loginCallsign').value.trim().toUpperCase();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorBox = document.getElementById('loginError');
+
+            if (password === 'admin123') {
+                currentUser = inputCallsign + ' (ครูปกครอง/Admin)';
+                localStorage.setItem('inspector_user', currentUser);
+                updateUserUI();
+                document.getElementById('loginModal').classList.add('hidden');
+                return;
+            }
+
+            if (inspectorCallsigns[inputCallsign] && password === 'yup238') {
+                currentUser = inspectorCallsigns[inputCallsign];
+                localStorage.setItem('inspector_user', currentUser);
+                updateUserUI();
+                document.getElementById('loginModal').classList.add('hidden');
+            } else {
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function updateUserUI() {
+            document.getElementById('currentLoggedInUser').innerText = currentUser;
+            document.getElementById('reporterName').value = currentUser;
+        }
+
+        function handleLogout() {
+            if(confirm('ต้องการออกจากระบบ?')) {
+                localStorage.removeItem('inspector_user');
+                currentUser = '';
+                openLoginModal();
+            }
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'record-violation', 'report', 'daily-archive', 'students'].forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).classList.remove('bg-amber-600', 'text-white', 'shadow');
+                document.getElementById(`nav-${t}`).classList.add('text-slate-300', 'hover:bg-slate-700');
+            });
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('bg-amber-600', 'text-white', 'shadow');
+            document.getElementById(`nav-${tabId}`).classList.remove('text-slate-300', 'hover:bg-slate-700');
+            
+            if(tabId === 'dashboard') { renderDashboard(); renderTodayViolations(); }
+            if(tabId === 'students') renderStudentsTable();
+            if(tabId === 'daily-archive') renderDailyArchive();
+            if(tabId === 'report') loadDayViolationsForReport();
+        }
+
+        function renderDashboard() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayCount = historyLogs.filter(l => l.date === todayStr).length;
+            document.getElementById('statTodayViolations').innerText = todayCount;
+            document.getElementById('statTotalViolations').innerText = historyLogs.length;
+            document.getElementById('statTotalStudents').innerText = students.length;
+        }
+
+        function renderTodayViolations() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const tbody = document.getElementById('todayViolationTableBody');
+            tbody.innerHTML = '';
+            const todayLogs = historyLogs.filter(l => l.date === todayStr);
+
+            if(todayLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">ยังไม่มีรายการทำผิดในวันนี้</td></tr>`;
+                return;
+            }
+
+            todayLogs.forEach(log => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b">
+                        <td class="p-3 text-slate-600">${log.date}</td>
+                        <td class="p-3 font-bold text-slate-800">${log.student}</td>
+                        <td class="p-3 text-slate-600">${log.class}</td>
+                        <td class="p-3"><span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">${log.violation}</span></td>
+                        <td class="p-3 text-xs text-slate-500">${log.reporter}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateStudentDatalist() {
+            const datalist = document.getElementById('studentDatalist');
+            datalist.innerHTML = students.map(s => `<option value="${s.id} - ${s.name} (${s.class})">`).join('');
+        }
+
+        // สลับแสดงกล่องกรอกฐานความผิดเพิ่มเอง
+        function toggleCustomViolationInput(selectElem, boxId) {
+            const box = document.getElementById(boxId);
+            if(selectElem.value === 'CUSTOM') {
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        // สลับแสดงกล่องพิมพ์จุดเสี่ยง
+        function toggleRiskPointBox(show) {
+            const box = document.getElementById('riskPointDetailContainer');
+            if(show) {
+                box.classList.remove('hidden');
+                document.getElementById('riskPointDetail').required = true;
+            } else {
+                box.classList.add('hidden');
+                document.getElementById('riskPointDetail').required = false;
+                document.getElementById('riskPointDetail').value = '';
+            }
+        }
+
+        // บันทึกความผิดนักเรียน
+        function saveSingleViolation(e) {
+            e.preventDefault();
+            const inputVal = document.getElementById('recordStudentInput').value.trim();
+            const selectType = document.getElementById('recordViolationType').value;
+            const customInput = document.getElementById('customViolationInput').value.trim();
+            const date = document.getElementById('recordDate').value;
+
+            let finalViolation = selectType;
+            if(selectType === 'CUSTOM') {
+                if(!customInput) {
+                    alert('กรุณากรอกระบุฐานความผิดเพิ่มเติม');
+                    return;
+                }
+                finalViolation = customInput;
+            }
+
+            if(!inputVal) return;
+
+            let studentName = inputVal;
+            let studentClass = 'ม.ต้น/ปลาย';
+
+            const found = students.find(s => inputVal.includes(s.id) || inputVal.includes(s.name));
+            if(found) {
+                studentName = found.name;
+                studentClass = found.class;
+            }
+
+            historyLogs.unshift({
+                id: Date.now() + Math.random(),
+                date: date,
+                student: studentName,
+                class: studentClass,
+                violation: finalViolation,
+                reporter: currentUser
+            });
+
+            localStorage.setItem('inspector_logs', JSON.stringify(historyLogs));
+            alert('บันทึกความผิดเรียบร้อยแล้ว!');
+            document.getElementById('recordStudentInput').value = '';
+            document.getElementById('customViolationInput').value = '';
+            document.getElementById('recordViolationType').value = 'มาสาย / ไม่ทันเข้าแถว';
+            document.getElementById('customViolationBox').classList.add('hidden');
+            switchTab('dashboard');
+        }
+
+        function calcStaff() {
+            let present = parseInt(document.getElementById('staffPresent').value) || 0;
+            document.getElementById('staffAbsent').value = Math.max(0, 16 - present);
+        }
+
+        function loadDayViolationsForReport() {
+            const date = document.getElementById('reportDate').value;
+            const container = document.getElementById('autoReportViolationList');
+            const dayLogs = historyLogs.filter(l => l.date === date);
+
+            if(dayLogs.length === 0) {
+                container.innerHTML = `<p class="text-slate-400">ไม่มีบันทึกการกระทำผิดในวันที่ ${date}</p>`;
+            } else {
+                let html = '';
+                dayLogs.forEach(l => {
+                    html += `<div class="p-2 bg-white rounded-lg border flex justify-between"><span><strong>${l.student}</strong> (${l.class}) - ${l.violation}</span><span class="text-slate-400">${l.reporter}</span></div>`;
+                });
+                container.innerHTML = html;
+            }
+        }
+
+        function submitDailyReport(e) {
+            e.preventDefault();
+            const date = document.getElementById('reportDate').value;
+            const reporter = document.getElementById('reporterName').value;
+            const staffPresent = document.getElementById('staffPresent').value;
+            const staffAbsent = document.getElementById('staffAbsent').value;
+            
+            const isAbnormal = document.querySelector('input[name="inspectionStatusRadio"]:checked').value === 'ABNORMAL';
+            const riskPointDetail = isAbnormal ? document.getElementById('riskPointDetail').value : 'เหตุการณ์ปกติทุกจุดเรียบร้อยดี';
+            const notes = document.getElementById('reportNotes').value;
+
+            dailyReports = dailyReports.filter(r => r.date !== date);
+            dailyReports.unshift({
+                date, reporter, staffPresent, staffAbsent, riskPointDetail, notes
+            });
+
+            localStorage.setItem('inspector_daily_reports', JSON.stringify(dailyReports));
+            alert('บันทึกรายงานสรุปประจำวันเรียบร้อยแล้ว!');
+            switchTab('daily-archive');
+        }
+
+        function renderDailyArchive() {
+            const container = document.getElementById('dailyArchiveList');
+            container.innerHTML = '';
+
+            if(dailyReports.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 text-center py-8">ยังไม่มีข้อมูลรายงานสรุปประจำวัน</p>`;
+                return;
+            }
+
+            dailyReports.forEach(rep => {
+                const dayViolations = historyLogs.filter(l => l.date === rep.date);
+                let violationsHtml = '';
+                if(dayViolations.length === 0) {
+                    violationsHtml = `<p class="text-xs text-slate-400">ไม่มีรายการทำผิดในวันนี้</p>`;
+                } else {
+                    dayViolations.forEach(v => {
+                        violationsHtml += `<span class="inline-block bg-rose-50 text-rose-800 text-xs px-2.5 py-1 rounded-lg border border-rose-200 mr-2 mb-2">${v.student} (${v.class}) - ${v.violation}</span>`;
+                    });
+                }
+
+                container.innerHTML += `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <span class="font-bold text-slate-800 text-base"><i class="fa-solid fa-calendar-day text-amber-600 mr-2"></i> ประจำวันที่: ${rep.date}</span>
+                            <span class="text-xs bg-blue-100 text-blue-700 font-semibold px-3 py-1 rounded-full">ผู้รายงาน: ${rep.reporter}</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
+                            <div><strong>กำลังพลปฏิบัติหน้าที่:</strong> ${rep.staffPresent}/16 คน (ลา/ขาด ${rep.staffAbsent} คน)</div>
+                            <div><strong>ผลการตรวจตึก/จุดเสี่ยง:</strong> ${rep.riskPointDetail}</div>
+                        </div>
+                        ${rep.notes ? `<div class="text-xs bg-white p-3 rounded-xl border"><strong>ข้อเสนอแนะ:</strong> ${rep.notes}</div>` : ''}
+                        <div>
+                            <p class="text-xs font-bold text-slate-700 mb-2">รวมยอดกระทำผิดวันนี้ (${dayViolations.length} รายการ):</p>
+                            <div>${violationsHtml}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderStudentsTable() {
+            const keyword = document.getElementById('studentSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('studentsTableBody');
+            tbody.innerHTML = '';
+            
+            const filtered = students.filter(s => s.name.toLowerCase().includes(keyword) || s.id.includes(keyword));
+
+            filtered.slice(0, 50).forEach(s => {
+                const count = historyLogs.filter(l => l.student === s.name).length;
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b">
+                        <td class="p-3 font-mono">${s.id}</td>
+                        <td class="p-3 font-semibold">${s.name}</td>
+                        <td class="p-3">${s.class}</td>
+                        <td class="p-3"><span class="px-2.5 py-1 ${count > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'} rounded-full text-xs font-bold">${count} ครั้ง</span></td>
+                        <td class="p-3 text-center">
+                            <button onclick="viewStudentHistory('${s.name}', '${s.class}')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow">
+                                <i class="fa-solid fa-eye mr-1"></i> ดูประวัติ
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function uploadCSV(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const lines = evt.target.result.split('\n');
+                let newStudents = [];
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 3) {
+                        newStudents.push({
+                            id: parts[0].trim(),
+                            name: parts[1].trim(),
+                            class: parts[2].trim()
+                        });
+                    }
+                });
+
+                if (newStudents.length > 0) {
+                    students = newStudents;
+                    localStorage.setItem('inspector_students', JSON.stringify(students));
+                    updateStudentDatalist();
+                    renderStudentsTable();
+                    alert(`นำเข้าข้อมูลนักเรียนสำเร็จทั้งหมด ${newStudents.length} คน!`);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function viewStudentHistory(studentName, studentClass) {
+            document.getElementById('modalStudentName').innerText = studentName;
+            document.getElementById('modalStudentClass').innerText = `ชั้น/ห้อง: ${studentClass}`;
+            
+            const listContainer = document.getElementById('studentViolationList');
+            const personalLogs = historyLogs.filter(l => l.student === studentName);
+
+            if(personalLogs.length === 0) {
+                listContainer.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">ไม่พบประวัติการทำผิด</p>';
+            } else {
+                let html = '';
+                personalLogs.forEach((log, index) => {
+                    html += `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700">
+                                <span>ครั้งที่ ${personalLogs.length - index}: ${log.violation}</span>
+                                <span class="text-slate-400">${log.date}</span>
+                            </div>
+                            <p class="text-slate-500">ผู้ลงบันทึก: ${log.reporter}</p>
+                        </div>
+                    `;
+                });
+                listContainer.innerHTML = html;
+            }
+            document.getElementById('studentHistoryModal').classList.remove('hidden');
+        }
+
+        function closeStudentHistoryModal() {
+            document.getElementById('studentHistoryModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
